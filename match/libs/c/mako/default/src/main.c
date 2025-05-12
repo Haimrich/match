@@ -9,7 +9,7 @@
 #define GOLDEN_CHECK_BENCH_ITERATIONS ${bench_iterations}
 % endif
 
-int main(int argc,char** argv){
+int main(int argc, char** argv){
     // target specific inits
     % for init_func in target.init_funcs:
     ${init_func}();
@@ -18,9 +18,19 @@ int main(int argc,char** argv){
     match_runtime_ctx match_ctx;
 
     % for out_name,out in match_outputs.items():
+    % if target.alloc_fn != "":
     ${out["c_type"]}* ${out_name}_pt = ${target.alloc_fn}(sizeof(${out["c_type"]}) * ${out["prod_shape"]});
+    % else:
+    ${out["c_type"]} ${out_name}_pt_[${out["prod_shape"]}];
+    ${out["c_type"]}* ${out_name}_pt = ${out_name}_pt_;
+    % endif
     % if golden_cpu_model:
+    % if target.alloc_fn != "":
     ${out["c_type"]}* golden_check_${out_name}_pt = ${target.alloc_fn}(sizeof(${out["c_type"]}) * ${out["prod_shape"]});
+    % else:
+    ${out["c_type"]} golden_check_${out_name}_pt_[${out["prod_shape"]}];
+    ${out["c_type"]}* golden_check_${out_name}_pt = golden_check_${out_name}_pt_;
+    % endif
     % endif
     % endfor
 
@@ -54,10 +64,12 @@ int main(int argc,char** argv){
     % endif
     
     % for out_name in match_outputs.keys():
-    % if golden_cpu_model:
+    % if golden_cpu_model and target.free_fn != "":
     ${target.free_fn}(golden_check_${out_name}_pt);
     % endif
+    % if target.free_fn != "":
     ${target.free_fn}(${out_name}_pt);
+    % endif
     % endfor
     // target specific cleaning functions
     % for clean_func in target.clean_funcs:
