@@ -1,16 +1,19 @@
 #ifndef CAR_LIB_CLUSTER_H
 #define CAR_LIB_CLUSTER_H
 
-#include <match/ctx.h>
+#include <stdint.h>
 
+#include "match/ctx.h"
 #include "carfield.h"
+
 #include "pulp_cluster.h"
 
-#include <carfield_lib/dma.h>
+#include "carfield_lib/dma.h"
 
-#ifdef CLUSTER_COMPILATION
-#include <pulp_nn/pulp_nn_kernels.h>
+#ifdef __pulp_cluster__
 #include "pulp.h"
+#include "bench/bench.h"
+#include "pulp_nn/pulp_nn_kernels.h"
 #endif
 
 
@@ -23,16 +26,18 @@ extern const uint8_t __l2_common_end[];
 
 #define offload_args ((volatile uint32_t*)__l2_common_start)
 
-static dma_transfer_id_t dma_transfer_;
-static void* im2col_pt_ = NULL;
-static void* pwt_pt_ = NULL;
-
+extern volatile dma_transfer_id_t dma_transfer_;
+extern volatile void* im2col_pt_;
+extern volatile void* pwt_pt_;
 
 int cluster_check_should_run();
 int cluster_check_main_core(MatchCtx* ctx);
 void cluster_sync_cores(MatchCtx* ctx);
 
-void* cluster_alloc_buffer(const char* name, int tensor_l1_pt, int size, int mem, int buffer_idx);
+void cluster_timer_start();
+uint32_t cluster_timer_stop();
+
+void cluster_alloc_buffer(const char* name, int tensor_l1_pt, int size, int mem, int buffer_idx);
 
 void cluster_lib_init(MatchCtx* ctx);
 

@@ -120,6 +120,7 @@ class MatchTarget(ABC):
         self.timestamp_to_ms = "* CLOCKS_PER_SEC/1000"
         self.alloc_fn = "malloc"
         self.free_fn = "free"
+        self.print_fn = "printf"
         self.offload_dma_fn = "offload_dma"
         self.clean_funcs=[]
         self.init_funcs=[]
@@ -127,6 +128,8 @@ class MatchTarget(ABC):
         self.input_macros=""
         self.__cached_pattern_results__=[]
         self.other_files_to_copy = []
+        self.timer_start_fn = ""
+        self.timer_stop_fn = ""
         for exec_module in exec_modules:
             self.add_exec_module(exec_module)
             self.exec_modules_dict[exec_module.name]=exec_module

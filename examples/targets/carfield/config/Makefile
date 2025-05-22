@@ -53,7 +53,7 @@ endef
 
 #$(foreach x, $(PULP_APPS), $(eval PULP_APP_SRCS_$(offload) := $(filter %/$(offload).c, $(MATCH_ALL_SRCS))))
 $(foreach x, $(PULP_APPS), $(eval $(call PULP_APP_SRCS_FUNC,$(x))))
-PULP_CFLAGS = -O3 $(MATCH_INCLUDES) -DCLUSTER_COMPILATION -DARCHI_CLUSTER_NB_PE=8 -I$(PULPRT_HOME)/lib/libc/minimal/include
+PULP_CFLAGS = -O3 $(MATCH_INCLUDES) -DCLUSTER_COMPILATION -DARCHI_CLUSTER_NB_PE=8 -I$(PULPRT_HOME)/lib/libc/minimal/include -D__pulp_cluster__
 PULPD_ELF_REMOVE_SECTIONS := --remove-section .l1cluster_g --remove-section .bss_l1
 
 -include $(PULP_SDK_HOME)/install/rules/pulp.mk

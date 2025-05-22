@@ -16,13 +16,13 @@
  * limitations under the License. 
 */
 
+<%namespace name="template_blocks" file="match_computation_block.c" />
+<%namespace name="template_blocks" file="node_inner.c" />   
+
 % if not exec_module.separate_build:
 
-    <%namespace name="template_blocks" file="match_computation_block.c" />
-    <%namespace name="template_blocks" file="node_inner.c" />
-
     // include params file
-    #include <nodes/${model_name}/${name}_params.h>
+    #include "nodes/${model_name}/${name}_params.h"
     #ifdef __MATCH_TEST_NODE_WITH_HELPER__
     #include <${target.name}/node_helper_nn.h>
     #endif
@@ -33,7 +33,7 @@
         % endif
     % endfor
 
-    ${template_blocks.node_inner()}
+    <%template_blocks:node_inner/>
 
     % if platform_apis.init_platform != "":
         int __attribute__ ((noinline)) ${node_fullname}(
@@ -55,15 +55,15 @@
     
 % else:
 
-    #include <match/ctx.h>
-    #include <match/utils.h>
-    #include <${target.name}.h>
+    #include "match/ctx.h"
+    #include "match/utils.h"
+    #include "${target.name}.h"
     % for inc_h in target.include_list:
-        #include <${inc_h}.h>
+        #include "${inc_h}.h"
     % endfor
-
+    
     #include "nodes/${model_name}/${name}_payload.h"
-    #include <nodes/${model_name}/${name}_params.h>
+    #include "nodes/${model_name}/${name}_params.h"
 
 
     int __attribute__ ((noinline)) ${node_fullname}(
@@ -74,9 +74,15 @@
             ${", " if idx>0 else ""}void* out_${out.name}_pt
         % endfor
     ){
+        % if target.timer_start_fn != "":
+            ${target.timer_start_fn}();
+        % endif
+
         // Write args (input and output tensor addresses) in shared memory
-        volatile uint32_t* args = (volatile uint32_t*)${node_fullname}_args_addr; \
-        <% tensor_cnt = 0 %>
+        volatile uint32_t* args = (volatile uint32_t*)${exec_module.shared_memory_extern_addr};
+        for (int i = 0; i < 16; i++) args[i] = 0;
+
+        <% tensor_cnt = 0 %> 
         % for tensor in {**match_node.var_tensors,**match_node.output_tensors}.values():
             args[${tensor_cnt}] = (volatile uint32_t)${"var_" if tensor.tensor_type=="var" else "out_"}${tensor.name}_pt;\
             <% tensor_cnt += 1 %>
@@ -101,7 +107,25 @@
         if (${node_fullname}_boot_addr != NULL) {
             ${platform_apis.init_platform}(${node_fullname}_boot_addr);
         }
-        
+
+        // Collect Stats
+        % if target.timer_stop_fn != "":
+            ${name}_stats.total_cycles = ${target.timer_stop_fn}();
+        % endif
+        % if exec_module.timer_stop_fn != "":
+            ${name}_stats.compute_cycles = args[8 + 0];
+            ${name}_stats.load_cycles = args[8 + 1];
+            ${name}_stats.store_cycles = args[8 + 2];
+        % endif
+
+        ${target.print_fn}("[HOST] Offload device finished.\r\n");
+
+        ${target.print_fn}("[HOST] Stats:\r\n");
+        ${target.print_fn}("       Total Cycles: %d\r\n", ${name}_stats.total_cycles);
+        ${target.print_fn}("       Compute Cycles: %d\r\n", ${name}_stats.compute_cycles);
+        ${target.print_fn}("       Load Cycles: %d\r\n", ${name}_stats.load_cycles);
+        ${target.print_fn}("       Store Cycles: %d\r\n", ${name}_stats.store_cycles);
+
         return 0;
     }
 

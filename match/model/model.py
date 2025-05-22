@@ -8,17 +8,20 @@ import re
 import subprocess
 
 import numpy as np
+
+from mako.template import Template
+
+import tvm
+from tvm import relay
+
 from match.compile.c_graph import MatchCompilerCGraph
 from match.runtime.graph.graph import MatchTVMGraphRuntime
 from match.relay.get_relay import get_dyn_relay_from, get_relay_from
-from match.utils import save_all_relay,add_save_relay,reset_relay_list,reset_output_path,\
-                        set_output_path,reset_schedules,save_all_schedules
+from match.utils import save_all_relay,reset_relay_list,reset_output_path,set_output_path,reset_schedules,save_all_schedules,format_c_code
 from match.compile.c_aot import MatchCompilerCAoT
-from mako.template import Template
-
 from match.utils.utils import c_friendly_npvalue, get_executor, get_random_np_array, numpy_dtype_to_c_type, set_executor, set_model_name
-import tvm
-from tvm import relay
+
+
 
 EXCUTOR_COMPILER_CLS = {"aot":MatchCompilerCAoT, "graph":MatchCompilerCGraph}    
 
@@ -248,20 +251,24 @@ class MatchModel:
             subprocess.getoutput(f"rm {host_only_lib_path}")
             graph_runtime_template_data = graph_runtime.generate()
             graph_runtime_template_data["debug"] = debug
+            
+            # Generate host graph runtime
             try:
                 with open(f"{build_dir}/codegen/host/src/{model_name}_graph.c","w") as run_file:
-                    run_file.write(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/src/graph.c").render(**graph_runtime_template_data))
+                    run_file.write(format_c_code(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/src/graph.c").render(**graph_runtime_template_data)))
                 with open(f"{build_dir}/codegen/host/include/{model_name}_graph.h","w") as run_file:
-                    run_file.write(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/include/graph.h").render(**graph_runtime_template_data))
+                    run_file.write(format_c_code(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/include/graph.h").render(**graph_runtime_template_data)))
                 # params
                 with open(f"{build_dir}/codegen/host/src/{model_name}_params_data.c","w") as run_file:
-                    run_file.write(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/src/params_data.c").render(**graph_runtime_template_data))
+                    run_file.write(format_c_code(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/src/params_data.c").render(**graph_runtime_template_data)))
                 with open(f"{build_dir}/codegen/host/include/{model_name}_params_data.h","w") as run_file:
-                    run_file.write(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/include/params_data.h").render(**graph_runtime_template_data))
+                    run_file.write(format_c_code(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/include/params_data.h").render(**graph_runtime_template_data)))
             except Exception as e:
-                print(f"[TEMPLATE WRITER] Error processing graph runtime template")
+                print("[TEMPLATE WRITER] Error processing graph runtime template")
                 raise e
+                     
             subprocess.getoutput(f"rm {build_dir}/mod.tar")
+            
         # create codegen if it doesn't exist
         if not Path(abs_out_path+"/codegen").is_dir():
             subprocess.getoutput(f"mkdir {abs_out_path}/codegen")

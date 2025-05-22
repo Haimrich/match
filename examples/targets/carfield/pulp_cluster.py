@@ -28,6 +28,12 @@ class PulpCluster(ExecModule):
         # self.schedule_engine = "basic"
         self.separate_build = True # Requires separate compilation
         self.is_smp = True # Execution model is Symmetric Multiprocessing
+        self.shared_memory_extern_addr = "offload_args"
+        # Host functions specific to this exec module
+        self.host_send_task_fn = "pulp_cluster_send_task_mbox"
+        self.host_wait_end_of_task_fn = "pulp_cluster_wait_end_of_task_mbox"
+        self.timer_start_fn = "cluster_timer_start"
+        self.timer_stop_fn = "cluster_timer_stop"
 
     def include_list(self):
         return ["carfield_lib/cluster"]
@@ -108,12 +114,14 @@ class PulpCluster(ExecModule):
             # doesnt seem to be used anywhere...
 
     def platform_apis_def(self, platform_apis: PlatformApis=None, pattern_name: str="conv2d"):
-        platform_apis.init_platform = "offload_to_pulp_cluster"
+        platform_apis.init_platform = "pulp_cluster_offload_blk"
         platform_apis.init_module = "cluster_lib_init"
         platform_apis.free_module = "cluster_lib_cleanup"
         
         platform_apis.smp_configured_core_guard = "cluster_check_should_run"
         platform_apis.smp_primary_core_guard = "cluster_check_main_core"
+        
+        platform_apis.print_fn = "mini_printf"
         
         return platform_apis
     
@@ -122,8 +130,6 @@ class PulpCluster(ExecModule):
         memory_apis.alloc_buffer = "cluster_alloc_buffer"
         memory_apis.init_memory["L1_SCRATCHPAD"] = "init_l1_scratchpad_memory"
         memory_apis.free_memory["L1_SCRATCHPAD"] = "free_l1_scrachpad_memory"
-        
-        memory_apis.shared_memory_extern_addr = "offload_args"
         
         return memory_apis
     

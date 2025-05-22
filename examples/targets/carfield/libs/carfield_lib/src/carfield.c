@@ -1,10 +1,12 @@
-#include <carfield_lib/carfield.h>
-// Std
+#include "carfield_lib/carfield.h"
+
+#include <stdint.h>
 #include <string.h>
+
 // Carfield
 #include "car_util.h"
 #include "car_memory_map.h"
-#include "car_util.h"
+#include "regs/system_timer.h"
 // Cheshire
 #include "dif/clint.h"
 #include "dif/dma.h"
@@ -21,12 +23,10 @@
 void carfield_init() {
     // Initialize the Carfield SoC
     car_enable_domain(CAR_PULP_RST);
+    // Initialize the UART
+    carfield_init_uart();
 
-    uint32_t rtc_freq = *reg32(&__base_regs, CHESHIRE_RTC_FREQ_REG_OFFSET);
-    uint64_t reset_freq = clint_get_core_freq(rtc_freq, 2500);
-    car_uart_init(&__base_uart, reset_freq, 115200);
-
-    mini_printf("Hi, there. I'm Carfield.\r\n\n");
+    mini_printf("Hi, there. I'm Carfield 🐱\r\n\n");
 }
 
 void carfield_shutdown() {
@@ -35,7 +35,7 @@ void carfield_shutdown() {
 }
 
 
-void reset_cluster() {
+void pulp_cluster_reset() {
     volatile uint32_t *booten_addr = (uint32_t*)(CAR_INT_CLUSTER_BOOTEN_ADDR(car_soc_ctrl));
     writew(0, booten_addr);
     volatile uint32_t *fetchen_addr = (uint32_t*)(CAR_INT_CLUSTER_FETCHEN_ADDR(car_soc_ctrl));
@@ -47,16 +47,25 @@ void reset_cluster() {
 }
 
 
-void offload_to_pulp_cluster(void* boot_addr)
+void pulp_cluster_offload_async(void* boot_addr)
 {
     mini_printf("Starting PULP cluster...\r\n");
-    reset_cluster();
+    pulp_cluster_reset();
     pulp_cluster_set_bootaddress(boot_addr);
     pulp_cluster_start();
     //mini_printf("> Started PULP cluster. Waiting...\r\n");
+}
+
+
+void pulp_cluster_offload_blk(void* boot_addr)
+{
+    pulp_cluster_offload_async(boot_addr);
     pulp_cluster_wait_eoc();
     mini_printf("> Cluster finished.\r\n");
 }
+
+
+// Other things
 
 void handle_host_dma_transfer(void* src, void* dst, size_t size) 
 {
@@ -85,4 +94,23 @@ void handle_host_dma_transfer(void* src, void* dst, size_t size)
         mini_printf("Transfer Verified Successfully.\r\n");
     }
     #endif
+}
+
+
+void carfield_init_uart() {
+    uint32_t rtc_freq = *reg32(&__base_regs, CHESHIRE_RTC_FREQ_REG_OFFSET);
+    uint64_t reset_freq = clint_get_core_freq(rtc_freq, 2500);
+    car_uart_init(&__base_uart, reset_freq, 115200);
+}
+
+
+void carfield_timer_start() {
+    writed(1, CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_RESET_LO_OFFSET);
+    writed(1, CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_START_LO_OFFSET);
+}
+    
+uint64_t carfield_timer_stop() {
+    writed(0, CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_CFG_LO_OFFSET);
+    volatile uint64_t time = readd(CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_CNT_LO_OFFSET);
+    return time;
 }
