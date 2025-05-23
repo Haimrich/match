@@ -74,9 +74,7 @@
             ${", " if idx>0 else ""}void* out_${out.name}_pt
         % endfor
     ){
-        % if target.timer_start_fn != "":
-            ${target.timer_start_fn}();
-        % endif
+        
 
         // Write args (input and output tensor addresses) in shared memory
         volatile uint32_t* args = (volatile uint32_t*)${exec_module.shared_memory_extern_addr};
@@ -94,6 +92,10 @@
             % endif
         % endfor
 
+        % if target.timer_start_fn != "":
+            ${target.timer_start_fn}();
+        % endif
+        
         // DMA the binary
         for (int i = 0; ${node_fullname}_binary_sections[i].size != 0; i++) {
             ${target.offload_dma_fn}(
@@ -116,6 +118,8 @@
             ${name}_stats.compute_cycles = args[8 + 0];
             ${name}_stats.load_cycles = args[8 + 1];
             ${name}_stats.store_cycles = args[8 + 2];
+            ${name}_stats.load_bytes = args[8 + 3];
+            ${name}_stats.store_bytes = args[8 + 4];
         % endif
 
         ${target.print_fn}("[HOST] Offload device finished.\r\n");
@@ -125,6 +129,8 @@
         ${target.print_fn}("       Compute Cycles: %d\r\n", ${name}_stats.compute_cycles);
         ${target.print_fn}("       Load Cycles: %d\r\n", ${name}_stats.load_cycles);
         ${target.print_fn}("       Store Cycles: %d\r\n", ${name}_stats.store_cycles);
+        ${target.print_fn}("       Load Bytes: %d\r\n", ${name}_stats.load_bytes);
+        ${target.print_fn}("       Store Bytes: %d\r\n", ${name}_stats.store_bytes);
 
         return 0;
     }
