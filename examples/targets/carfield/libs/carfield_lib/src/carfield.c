@@ -18,6 +18,7 @@
 
 
 #define VERIFY_DMA 0
+#define CARFIELD_DEBUG 0
 
 
 void carfield_init() {
@@ -49,7 +50,9 @@ void pulp_cluster_reset() {
 
 void pulp_cluster_offload_async(void* boot_addr)
 {
+    #if CARFIELD_DEBUG
     mini_printf("Starting PULP cluster...\r\n");
+    #endif
     pulp_cluster_reset();
     pulp_cluster_set_bootaddress(boot_addr);
     pulp_cluster_start();
@@ -61,7 +64,9 @@ void pulp_cluster_offload_blk(void* boot_addr)
 {
     pulp_cluster_offload_async(boot_addr);
     pulp_cluster_wait_eoc();
+    #if CARFIELD_DEBUG
     mini_printf("> Cluster finished.\r\n");
+    #endif
 }
 
 
@@ -69,11 +74,13 @@ void pulp_cluster_offload_blk(void* boot_addr)
 
 void handle_host_dma_transfer(void* src, void* dst, size_t size) 
 {
+    #if CARFIELD_DEBUG
     mini_printf("Starting DMA transfer...\r\n");
+    #endif
     sys_dma_2d_blk_memcpy(dst, src, size, 0, 0, 1);
-
+    #if CARFIELD_DEBUG
     mini_printf("Transfer complete.\r\n");
-
+    #endif
     #if VERIFY_DMA
     // Verify
     volatile uint8_t* src_ptr = (uint8_t*)src;
