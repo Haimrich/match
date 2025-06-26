@@ -74,6 +74,8 @@ class Carfield(MatchTarget):
         self.timer_start_fn = "carfield_timer_start"
         self.timer_stop_fn = "carfield_timer_stop"
         self.fix_io_tensors_in_ext_mem = False
+        # wait
+        self.wait_eoc = "carfield_wait_eoc"
 
     def network_transformations(self, opts):
         return [

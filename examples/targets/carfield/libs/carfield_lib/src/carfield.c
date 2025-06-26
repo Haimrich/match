@@ -20,6 +20,9 @@
 #include "carfield_lib/uart.h"
 #include "carfield_lib/mbox.h"
 
+// TODO - make it general
+#include "model_graph.h"
+
 
 #define VERIFY_DMA 0
 
@@ -38,6 +41,10 @@ void carfield_init() {
 void carfield_shutdown() {
     car_disable_domain(CAR_PULP_RST);
     mini_printf("\r\nBye.\r\n");
+}
+
+void carfield_wait_eoc() {
+    asm volatile("wfi":::"memory");
 }
 
 
@@ -105,7 +112,6 @@ int pulp_cluster_wait_end_of_task_mbox(volatile uint32_t* args, uint32_t task_id
     return last_task_error_code;
 }
 
-
 // Host interrupt related things
 
 
@@ -155,6 +161,7 @@ void trap_vector(void) {
     dif_rv_plic_irq_claim(&plic0, 0, &claim_irq);
     if (claim_irq == HOST_MBOX_IRQ) {
         handle_interrupt_pulp_cluster_mbox();
+        match_model_runtime_eoc_callback(last_completed_node_id); // TODO make it general
         dif_rv_plic_irq_complete(&plic0, 0, claim_irq);
     }
 }

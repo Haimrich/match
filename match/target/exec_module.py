@@ -167,6 +167,7 @@ class ExecModule(ABC):
                  name: str="default_module",
                  libs_required: Dict[str, ModuleLib] = {},
                  **kwargs):
+        self.id = 0
         self.name = name
         self.FULL_DIM = sys.maxsize
         self.zigzag_optimal_spatial_mapping = None

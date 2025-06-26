@@ -174,12 +174,12 @@ int match_${model_name}_run_graph(
     ${target.load_to_ext_mem_fn}(${mem_tensor.name}_pt, ${mem_tensor.name}_ext_pt,${mem_tensor.elems * mem_tensor.dtype.itemsize});
 % endfor
 
-// Free MATCH memory pool
+// Free MATCH L2 memory pool
 % if mem_needed_bytes > 0 and target.free_fn != "":
     ${target.free_fn}(match_mem);
 % endif
 
-// Free external memory pool
+// Free external L3 memory pool
 % if ext_mem_needed_bytes > 0:
     ${target.free_external_mem}(match_ext_mem, ${ext_mem_needed_bytes});
 % endif

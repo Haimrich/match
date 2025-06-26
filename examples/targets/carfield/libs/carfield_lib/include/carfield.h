@@ -18,6 +18,8 @@ void carfield_init_uart();
 
 void carfield_shutdown();
 
+void carfield_wait_eoc();
+
 void handle_host_dma_transfer(
     void* src,
     void* dst,

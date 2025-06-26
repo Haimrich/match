@@ -254,6 +254,7 @@ class MatchTVMGraphRuntime:
             if mem_tensor_ is not None:
                 np.frombuffer(activation.flatten().tobytes(),dtype="uint8").tofile(Path(self.out_path+f"/golden/{self.model_name}_{activation_name}_data.hex"))
         template_data = {
+            "async": False,
             "target": self.target,
             "mem_tensors": mem_tensors,
             "ext_mem_needed_bytes": self.ext_mem_needed_bytes,

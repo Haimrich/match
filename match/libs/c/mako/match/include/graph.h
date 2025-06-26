@@ -82,4 +82,30 @@ int match_${model_name}_run_graph(
 % endfor
 );
 
+// Define async graph runtime function
+int match_${model_name}_run_graph_async(
+% for rt_i in rt_inputs:
+    ${rt_i.c_type}* ${rt_i.name}_${"ext_" if rt_i.stored_in_external_memory else ""}pt,
+% endfor
+% for rt_o_idx,rt_o in enumerate(rt_outputs):
+    ${"" if rt_o_idx==0 else ", "}${rt_o.c_type}* ${rt_o.name}_${"ext_" if rt_o.stored_in_external_memory else ""}pt
+% endfor
+);
+
+// Model graph info
+extern const int match_${model_name}_num_nodes;
+
+// Keep track of the number of remaining parents to be executed for each node
+extern int match_${model_name}_num_remaining_parents[${len(nodes)}];
+
+// Keep track of device busy status - TODO for multi-model support this should not-be per mode
+extern int match_${model_name}_device_is_busy[${target.num_devices}];
+
+// Node execution complete callback - TODO for multi-model support this should not-be per model
+void match_${model_name}_runtime_eoc_callback(int node_id);
+
+// Graph execution finished flag
+extern volatile int match_${model_name}_graph_execution_finished;
+
+
 #endif

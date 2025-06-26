@@ -15,7 +15,7 @@ import tvm
 from tvm import relay
 
 from match.compile.c_graph import MatchCompilerCGraph
-from match.runtime.graph.graph import MatchTVMGraphRuntime
+from match.runtime.graph_async.graph import MatchTVMGraphRuntime
 from match.relay.get_relay import get_dyn_relay_from, get_relay_from
 from match.utils import save_all_relay,reset_relay_list,reset_output_path,set_output_path,reset_schedules,save_all_schedules,format_c_code
 from match.compile.c_aot import MatchCompilerCAoT
@@ -240,6 +240,7 @@ class MatchModel:
                     f"{build_dir}/codegen/host/src/lib1.c"
                 ],
                 options=include_paths+other_flags,
+                cc="clang"
             )
             host_module = tvm.runtime.load_module(host_only_lib_path)
             # read the json of the mod and the params to build the runtime
@@ -271,9 +272,12 @@ class MatchModel:
             graph_runtime_template_data["debug_fallback"] = debug_fallback
             graph_runtime_template_data["profile"] = profile
             graph_runtime_template_data["profile_fallback"] = profile_fallback
+            
             try:
                 with open(f"{build_dir}/codegen/host/src/{model_name}_graph.c","w") as run_file:
                     run_file.write(format_c_code(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/src/graph.c").render(**graph_runtime_template_data)))
+                with open(f"{build_dir}/codegen/host/src/{model_name}_graph_async.c","w") as run_file:
+                    run_file.write(format_c_code(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/src/graph_async.c",  strict_undefined=True).render(**graph_runtime_template_data)))
                 with open(f"{build_dir}/codegen/host/include/{model_name}_graph.h","w") as run_file:
                     run_file.write(format_c_code(Template(filename = os.path.dirname(__file__)+"/../libs/c/mako/match/include/graph.h").render(**graph_runtime_template_data)))
                 # params

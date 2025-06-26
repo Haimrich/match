@@ -123,6 +123,7 @@ class MatchTarget(ABC):
         self.free_fn = "free"
         self.print_fn = "printf"
         self.offload_dma_fn = "offload_dma"
+        self.wait_eoc = "wait_eoc"
         self.clean_funcs=[]
         self.init_funcs=[]
         self.include_list=[]
@@ -382,6 +383,7 @@ class MatchTarget(ABC):
             match_additional_checks=partial(self.match_additional_checks_,match_pt=match_pt)
             match_pt.set_match_additional_checks(match_additional_checks)
             self.match_patterns.append(match_pt)
+        exec_module.id = len(self.exec_modules)
         self.exec_modules.append(exec_module)
         # sort again cause we added new patterns
         self.sort_match_patterns()
@@ -412,6 +414,11 @@ class MatchTarget(ABC):
             if not mem.external:
                 return mem.name
         return ""
+    
+    @property
+    def num_devices(self):
+        # Number of exec_modules + 1 for the host
+        return len(self.exec_modules) + 1
     
     def host_memories(self):
         return [
