@@ -131,7 +131,7 @@ static int ${model_name}_node_device_id[] = {${", ".join(str(node.device_id) for
         #endif
 
         // Check debug checksum
-        #if __${model_name}_GRAPH_DEBUG__ ${f"&& __{model_name}_FALLBACK_GRAPH_DEBUG__" if node.fallback else ""}
+        #if __${model_name}_GRAPH_DEBUG__ && __${model_name}_FALLBACK_GRAPH_DEBUG__
         ${target.print_fn}("[${model_name} GRAPH] TVM node ${node.name} done, output differs from checksum by %d\r\n", match_byte_checksum_check(${node.outputs[0].name}_pt, __${model_name}_GRAPH_${node.name}_BYTES__, __${model_name}_GRAPH_${node.name}_CHECKSUM__));
         #endif
 
@@ -157,6 +157,24 @@ static int ${model_name}_node_device_id[] = {${", ".join(str(node.device_id) for
 
     % endif
     }
+
+    % if not node.fallback:
+        static void match_${model_name}_finish_node_${node_id}() {
+            ${node.fn_name}_finish();
+
+            #if __${model_name}_FALLBACK_GRAPH_PROFILE__
+            node_end_time[node_id] = ${target.end_get_timestamp_api}();
+            ${target.print_fn}("[${model_name} GRAPH] MATCH node ${node.name} done, time %fms\r\n",
+                ((double)(node_end_time[node_id] - node_start_time[node_id])) ${target.timestamp_to_ms});
+            #endif
+
+            // Check debug checksum
+            #if __${model_name}_GRAPH_DEBUG__
+            ${target.print_fn}("[${model_name} GRAPH] MATCH node ${node.name} done, output differs from checksum by %d\r\n", match_byte_checksum_check(${node.outputs[0].name}_pt, __${model_name}_GRAPH_${node.name}_BYTES__, __${model_name}_GRAPH_${node.name}_CHECKSUM__));
+            #endif
+        }
+    % endif
+
 
 % endfor
 
@@ -186,6 +204,7 @@ int match_${model_name}_num_remaining_parents[] = {${", ".join(str(node.num_pare
 int match_${model_name}_device_is_busy[${target.num_devices}] = {0};
 
 static void (*match_${model_name}_start_node_fn[])(void) = {${", ".join(f"match_{model_name}_start_node_{i}" if not node.fallback else f"match_{model_name}_run_tvm_node_{i}" for i, node in enumerate(nodes))}};
+static void (*match_${model_name}_finish_node_fn[])(void) = {${", ".join(f"match_{model_name}_finish_node_{i}" if not node.fallback else f"NULL" for i, node in enumerate(nodes))}};
 
 static int next_tvm_node_id = -1;
 
@@ -209,6 +228,10 @@ static match_${model_name}_schedule_next_node() {
 }
 void match_${model_name}_runtime_eoc_callback(int node_match_id) {
     int node_id = match_${model_name}_node_match2seq_id(node_match_id);
+
+    // Perform final activities after node execution
+    match_${model_name}_finish_node_fn[node_id]();
+
     ${target.print_fn}("[${model_name} ASYNC] Device EOC callback for node %d (%d)\r\n", node_id, node_match_id);
 
     // Decrease the number of remaining parents for the node children
@@ -346,7 +369,6 @@ while (!match_${model_name}_graph_execution_finished)
             // No TVM node to execute, wait MATCH nodes
             ${target.print_fn}("[${model_name} GRAPH] Host idle waiting for device EOC...\r\n");
             ${target.wait_eoc}();
-            ${target.print_fn}("Exited interrupt, graph_finished %d\r\n", match_${model_name}_graph_execution_finished);
             break;
         default:
             // Error

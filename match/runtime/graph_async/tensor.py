@@ -10,6 +10,7 @@ from match.utils.utils import c_friendly_npvalue, numpy_dtype_to_c_type
 class MatchMemoryTensor:
     def __init__(
         self,
+        id: int = 0,
         name: str = "tensor",
         is_intermediate: bool = False,
         is_constant: bool = False,
@@ -22,6 +23,7 @@ class MatchMemoryTensor:
         node_id: int = 0,
         node_info={},
     ):
+        self.id = id
         self.name = name
         self.is_intermediate = is_intermediate
         self.is_constant = is_constant
