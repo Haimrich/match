@@ -37,6 +37,8 @@ void pulp_fp16_conv2d(
     const fp16 *__restrict__ input,         // Pointer to the input feature map
     const fp16 *__restrict__ weight,        // Pointer to the weights
     const fp16 *__restrict__ bias,          // Pointer to the bias vector
+    const fp16 *__restrict__ bnorm_mul,     // Pointer to the batch normalization scale
+    const fp16 *__restrict__ bnorm_add,     // Pointer to the batch normalization offset
     fp16 *__restrict__       output,        // Pointer to the output feature map
     fp16 *__restrict__       im2col,        // Pointer to the im2col buffer
     uint32_t                 dim_ix,        // Input Width

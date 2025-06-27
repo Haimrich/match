@@ -12,6 +12,8 @@ static void pulp_fp16_conv2d_nhwc_ohwi_par_oc_naive(
     const fp16   *input,      // NHWC
     const fp16   *weight,     // OHWI
     const fp16   *bias,       // O
+    const fp16   *bnorm_mul,  // O
+    const fp16   *bnorm_add,  // O
     fp16         *output,     // NHWC
     fp16         *im2col,     // im2col buffer (not used)
     uint32_t      dim_ix,     // input width
@@ -55,6 +57,10 @@ static void pulp_fp16_conv2d_nhwc_ohwi_par_oc_naive(
                         }
                     }
                 }
+                // Apply batch normalization
+                if (bnorm_mul != NULL && bnorm_add != NULL) {
+                    dot = dot * bnorm_mul[oc] + bnorm_add[oc];
+                }
                 // Apply ReLU
                 if (apply_relu && dot < (fp16)0.0f) {
                     dot = 0.0f;
@@ -72,6 +78,8 @@ static void pulp_fp16_conv2d_nhwc_ohwi_par_oc_im2col_pp(
     const fp16   *input,      // NHWC
     const fp16   *weight,     // OHWI
     const fp16   *bias,       // O
+    const fp16   *bnorm_mul,  // O
+    const fp16   *bnorm_add,  // O
     fp16         *output,     // NHWC
     fp16         *im2col,     // im2col buffer (private per thread)
     uint32_t      dim_ix,     // input width
@@ -122,11 +130,19 @@ static void pulp_fp16_conv2d_nhwc_ohwi_par_oc_im2col_pp(
             // Compute
             for (uint32_t oc = start_oc; oc < stop_oc; oc++) {
                 const fp16 *w = weight + oc * dim_fy * dim_fx * dim_ic;
+                // Add Bias
                 fp16 acc = bias ? bias[oc] : (fp16)0.0f;
+                // Compute
                 for (uint32_t i = 0; i < im2col_size; i++) {
                     acc += im2col_thread[i] * w[i];
                 }
+                // Apply batch normalization
+                if (bnorm_mul != NULL && bnorm_add != NULL) {
+                    acc = acc * bnorm_mul[oc] + bnorm_add[oc];
+                }
+                // Apply ReLU
                 if (apply_relu && acc < (fp16)0.0f) acc = (fp16)0.0f;
+                // Save Result
                 output[((oy * dim_ox + ox) * dim_oc) + oc] = acc;
             }
         }
@@ -139,6 +155,8 @@ void pulp_fp16_conv2d(
     const fp16 *__restrict__ input,         // Pointer to the input feature map
     const fp16 *__restrict__ weight,        // Pointer to the weights
     const fp16 *__restrict__ bias,          // Pointer to the bias vector
+    const fp16 *__restrict__ bnorm_mul,     // Pointer to the batch normalization scale
+    const fp16 *__restrict__ bnorm_add,     // Pointer to the batch normalization offset
     fp16 *__restrict__       output,        // Pointer to the output feature map
     fp16 *__restrict__       im2col,        // Pointer to the im2col buffer
     uint32_t                 dim_ix,        // Input Width
@@ -158,7 +176,7 @@ void pulp_fp16_conv2d(
     uint32_t                 apply_relu     // Apply ReLU activation
 ) {
     pulp_fp16_conv2d_nhwc_ohwi_par_oc_im2col_pp(
-        input, weight, bias, output, im2col,
+        input, weight, bias, bnorm_mul, bnorm_add, output, im2col,
         dim_ix, dim_iy, dim_ic,
         dim_ox, dim_oy, dim_oc,
         dim_fx, dim_fy,

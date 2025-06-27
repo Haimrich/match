@@ -358,6 +358,8 @@ void pulp_fp16_conv2d_wrapper(MatchCtx* ctx){
     void *input = tensors[0].pt;
     void *weight = tensors[1].pt;
     void *bias = num_tensors > 3 ? tensors[2].pt : NULL;
+    void *bnorm_mul = num_tensors > 4 ? tensors[3].pt : NULL;
+    void *bnorm_add = num_tensors > 4 ? tensors[4].pt : NULL;
     void *output = tensors[num_tensors-1].pt;
     void *im2col = im2col_pt_;
 
@@ -390,7 +392,7 @@ void pulp_fp16_conv2d_wrapper(MatchCtx* ctx){
 #endif
 
     pulp_fp16_conv2d(
-        input, weight, bias, output, im2col,
+        input, weight, bias, bnorm_mul, bnorm_add, output, im2col,
         inp_width, inp_height, inp_ch,
         out_width,out_height, out_ch, 
         filter_width, filter_height,

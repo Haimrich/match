@@ -221,10 +221,10 @@ class PulpCluster(ExecModule):
         def conv2d():
             conv2d = is_op("nn.conv2d")(wildcard(), wildcard())
             conv2d_bias = is_op("add")(conv2d, is_constant()) | is_op("add")(is_constant(), conv2d)
-            return conv2d_bias
-            #conv2d_batch_mul = is_op("multiply")(conv2d_bias, is_constant()) | is_op("multiply")(is_constant(), conv2d_bias)
-            #conv2d_batch_add = is_op("add")(conv2d_batch_mul, is_constant()) | is_op("add")(is_constant(), conv2d_batch_mul)
-            #return conv2d_batch_add
+            #return conv2d_bias
+            conv2d_batch_mul = is_op("multiply")(conv2d_bias, is_constant()) | is_op("multiply")(is_constant(), conv2d_bias)
+            conv2d_batch_add = is_op("add")(conv2d_batch_mul, is_constant()) | is_op("add")(is_constant(), conv2d_batch_mul)
+            return conv2d_batch_add
             
         def avgpool2d():
             avgpool2d = is_op("nn.avgpool2d")(wildcard())
