@@ -45,6 +45,7 @@ void carfield_shutdown() {
 
 void carfield_wait_eoc() {
     asm volatile("wfi":::"memory");
+    asm volatile("fence rw,rw":::"memory"); // important
 }
 
 
