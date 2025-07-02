@@ -47,8 +47,8 @@
 
 // Profiling things
 
-static double node_start_time[${len(nodes)}];
-static double node_end_time[${len(nodes)}];
+static volatile uint64_t node_start_time[${len(nodes)}];
+static volatile uint64_t node_end_time[${len(nodes)}];
 
 // Additional node info for async exec
 
@@ -112,8 +112,10 @@ static int ${model_name}_node_device_id[] = {${", ".join(str(node.device_id) for
         % endfor
 
         #if __${model_name}_FALLBACK_GRAPH_PROFILE__
-        node_start_time[node_id] = ${target.start_get_timestamp_api}();
+        node_start_time[${node_id}] = ${target.start_get_timestamp_api}();
         #endif
+
+        ${target.print_fn}("Start time is %d.\r\n", node_start_time[${node_id}]);
 
         ${node.fn_name}(
             ${node.name}_args_, 
@@ -125,9 +127,10 @@ static int ${model_name}_node_device_id[] = {${", ".join(str(node.device_id) for
         );
 
         #if __${model_name}_FALLBACK_GRAPH_PROFILE__
-        node_end_time[node_id] = ${target.end_get_timestamp_api}();
-        ${target.print_fn}("[${model_name} GRAPH] TVM node ${node.name} done, time %fms\r\n",
-            ((double)(node_end_time[node_id] - node_start_time[node_id])) ${target.timestamp_to_ms});
+        node_end_time[${node_id}] = ${target.end_get_timestamp_api}();
+        ${target.print_fn}("[${model_name} GRAPH] TVM node ${node.name} done, start: %d, end: %d, diff: %d, time: %fms\r\n",
+            node_start_time[${node_id}], node_end_time[${node_id}], (node_end_time[${node_id}] - node_start_time[${node_id}]),
+            ((double)(int)(node_end_time[${node_id}] - node_start_time[${node_id}])) ${target.timestamp_to_ms});
         #endif
 
         // Check debug checksum
@@ -143,7 +146,7 @@ static int ${model_name}_node_device_id[] = {${", ".join(str(node.device_id) for
         % endfor
 
         #if __${model_name}_GRAPH_PROFILE__
-        node_start_time[node_id] = ${target.start_get_timestamp_api}();
+        node_start_time[${node_id}] = ${target.start_get_timestamp_api}();
         #endif
 
         ${node.fn_name}_async(
@@ -163,9 +166,10 @@ static int ${model_name}_node_device_id[] = {${", ".join(str(node.device_id) for
             ${node.fn_name}_finish();
 
             #if __${model_name}_FALLBACK_GRAPH_PROFILE__
-            node_end_time[node_id] = ${target.end_get_timestamp_api}();
-            ${target.print_fn}("[${model_name} GRAPH] MATCH node ${node.name} done, time %fms\r\n",
-                ((double)(node_end_time[node_id] - node_start_time[node_id])) ${target.timestamp_to_ms});
+            node_end_time[${node_id}] = ${target.end_get_timestamp_api}();
+            ${target.print_fn}("[${model_name} GRAPH] MATCH node ${node.name} done, start: %d, end: %d, diff: %d, time: %fms\r\n",
+                node_start_time[${node_id}], node_end_time[${node_id}], (node_end_time[${node_id}] - node_start_time[${node_id}]),
+                ((double)(int)(node_end_time[${node_id}] - node_start_time[${node_id}])) ${target.timestamp_to_ms});
             #endif
 
             // Check debug checksum
@@ -398,6 +402,19 @@ while (!match_${model_name}_graph_execution_finished)
     // Free external memory pool
     ${target.free_external_mem}(match_ext_mem, ${ext_mem_needed_bytes});
 % endif
+
+// Print stats
+#if __${model_name}_GRAPH_PROFILE__
+    ${target.print_fn}("[${model_name} GRAPH] Graph execution finished\r\n");
+    % for node_id, node in enumerate(nodes):
+        ${target.print_fn}("[${model_name} GRAPH] Node %d (${node.name}) start: %d - end: %d - interval: %f - device: %d\r\n", ${node_id},
+            node_start_time[${node_id}],
+            node_end_time[${node_id}],
+            ((double)(int)(node_end_time[${node_id}] - node_start_time[${node_id}])) ${target.timestamp_to_ms},
+            ${model_name}_node_device_id[${node_id}]
+            );
+    % endfor
+#endif
 
 return 0;
 }

@@ -27,7 +27,9 @@ void handle_host_dma_transfer(
 );
 
 void carfield_timer_start();
-uint64_t carfield_timer_stop();
+void carfield_timer_stop();
+uint64_t carfield_timer_read();
+float carfield_timer_to_ms_factor();
 
 // External memory management
 void* carfield_init_ram(size_t size);

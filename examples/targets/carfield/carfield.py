@@ -46,16 +46,14 @@ class Carfield(MatchTarget):
         self.tvm_runtime_include_path = os.path.dirname(__file__)+"/config/tvm_runtime.h"
         self.tvm_runtime_src_path = os.path.dirname(__file__)+"/config/tvm_runtime.c"
         self.crt_config_path = os.path.dirname(__file__)+"/config/crt_config.h"
-        self.include_list = [
-            "carfield_lib/carfield"
-        ]
+        self.include_list = ["carfield_lib/carfield", "carfield_lib/printf"]
 
     def set_apis(self):
         # profiling ones
-        self.start_get_timestamp_api = "start_match_perf_counter"
-        self.end_get_timestamp_api = "stop_match_perf_counter"
-        self.timestamp_to_ms = ""
-        self.timestamp_type = "int"
+        self.start_get_timestamp_api = "carfield_timer_read"
+        self.end_get_timestamp_api = "carfield_timer_read"
+        self.timestamp_to_ms = "* carfield_timer_to_ms_factor()"
+        self.timestamp_type = "uint64_t"
         # initialization and cleaning
         self.init_funcs = ["carfield_init"]
         self.clean_funcs = ["carfield_shutdown"]
@@ -71,8 +69,8 @@ class Carfield(MatchTarget):
         # offload dma
         self.offload_dma_fn = "handle_host_dma_transfer"
         self.print_fn = "mini_printf"
-        self.timer_start_fn = "carfield_timer_start"
-        self.timer_stop_fn = "carfield_timer_stop"
+        self.timer_start_fn = "carfield_timer_read"
+        self.timer_stop_fn = "carfield_timer_read"
         self.fix_io_tensors_in_ext_mem = False
         # wait
         self.wait_eoc = "carfield_wait_eoc"

@@ -24,7 +24,9 @@ oenne_model = MatchModel(
     default_inputs = get_default_inputs(mod=relay_mod, params=relay_params, input_files=[INPUT_FILE_PATH]),
     handle_out_fn="handle_fp16_classifier",
     debug = True,
-    debug_fallback = True
+    debug_fallback = True,
+    profile = True,
+    profile_fallback = True,
 )
 match.match(
     model = oenne_model,

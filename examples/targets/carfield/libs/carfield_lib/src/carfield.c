@@ -34,11 +34,14 @@ void carfield_init() {
     carfield_init_uart();
     // If mailboxes are used initialize the PLIC
     carfield_init_plic();
+    // Start system timer
+    carfield_timer_start();
 
     mini_printf("Hi, there. I'm Carfield 🐱\r\n\n");
 }
 
 void carfield_shutdown() {
+    carfield_timer_stop();
     car_disable_domain(CAR_PULP_RST);
     mini_printf("\r\nBye.\r\n");
 }
@@ -208,14 +211,25 @@ void carfield_init_uart() {
 
 
 void carfield_timer_start() {
-    writed(1, CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_RESET_LO_OFFSET);
+    writed(1, CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_RESET_LO_OFFSET)
+    *(volatile uint32_t*)(CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_CFG_LO_OFFSET) |= (1 << TIMER_CFG_LO_CCFG_BIT);
     writed(1, CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_START_LO_OFFSET);
 }
     
-uint64_t carfield_timer_stop() {
+void carfield_timer_stop() {
     writed(0, CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_CFG_LO_OFFSET);
-    volatile uint64_t time = readd(CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_CNT_LO_OFFSET);
-    return time;
+}
+
+uint64_t carfield_timer_read() {
+    asm volatile("" ::: "memory");
+    volatile uint64_t counter = readd(CAR_SYSTEM_TIMER_BASE_ADDR + TIMER_CNT_LO_OFFSET);
+    asm volatile("" ::: "memory");
+    return counter;
+}
+
+float carfield_timer_to_ms_factor() {
+    uint32_t rtc_freq = *reg32(&__base_regs, CHESHIRE_RTC_FREQ_REG_OFFSET);
+    return 1000.0f / (float)(rtc_freq);
 }
 
 // External memory management
